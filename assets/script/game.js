@@ -29,36 +29,137 @@ cc.Class({
     // LIFE-CYCLE CALLBACKS:
 
     // onLoad () {},
+    //接收起点和终点, 有一个路径点被点中了
+    you_lujing_beidianjile(brick_js) {
+        //初始状态 点了一个块, 这个块设置为起点块
+        if (this.m_blockState == 0) {
+            this.m_startBlockJs = brick_js;//保存这个块为起始块
+            this.m_blockState = 1;//设置状态为有起点
+
+            brick_js.setState('qidian');//把这个块设置成起点的颜色
+            return;
+        }
+
+        //处理有点的状态, 分2种情况
+        //1. 点击的是原来的起始块, 那么就取消起始块
+        //2. 点击的是别的块, 那么就设置终点块
+        if (this.m_blockState == 1) {
+            if (brick_js == this.m_startBlockJs) {//点击的是原来的起始块, 那么就取消起始块
+                this.m_startBlockJs = null;
+                this.m_blockState = 0;
+                brick_js.setState('moren');//把这个块设置成默认的颜色
+            } else {// 点击的是别的块, 那么就设置终点块
+                this.m_endBlockJs = brick_js;
+                this.m_blockState = 2;
+                brick_js.setState('zhongdian');//把这个块设置成终点的颜色
+
+                //需要划线或者做起点到终点的动作
+                this.node.stopAction(this.game_character);
+                let qiian_hang = this.m_startBlockJs.hang;
+                let qidian_lie = this.m_startBlockJs.lie;
+                let zhong_dian_hang = this.m_endBlockJs.hang;
+                let zhong_dian_lie = this.m_endBlockJs.lie;
+                let path = this.look_for_exit(this.di_tu_arr[qiian_hang][qidian_lie], this.di_tu_arr[zhong_dian_hang][zhong_dian_lie], this.di_tu_arr);
+                this.game_character = cc.instantiate(this.game_character_prefab);
+                if (this.xing_jie_dian) {
+                    this.xing_jie_dian.destroy();
+                    this.xing_jie_dian = null;
+                }
+                this.xing_jie_dian = new cc.Node();
+                this.xing_jie_dian.parent = this.game_node;
+                this.game_character.position = path[path.length - 1].position;
+                this.xing_jie_dian.addChild(this.game_character);
+                for (let i = path.length - 1; i >= 0; i--) {
+                    this.node.runAction(cc.sequence(cc.delayTime(0.5 + (path.length - i) / 5), cc.callFunc(function () {
+                        this.game_character.position = path[i].position;
+                    }.bind(this))))
+                }
+            }
+            return;
+        }
+
+        //如果有终点块了, 但还点了块, 看这个块是不是终点块
+        if (this.m_blockState == 2) {
+            if (this.m_endBlockJs != brick_js) {
+                // 1. 停掉之前的 划线或者做起点到终点的动作
+                this.node.stopAction(this.game_character);
+                this.m_endBlockJs.setState('moren');//把这个块设置成终点的颜色
+
+
+                //2. 设置这个块为终点块
+                this.m_endBlockJs = brick_js;
+                this.m_blockState = 2;
+
+                brick_js.setState('zhongdian');//把这个块设置成终点的颜色
+
+                //需要划线或者做起点到终点的动作 m_startBlockJs这个就是那个js脚本
+                let qiian_hang = this.m_startBlockJs.hang;
+                let qidian_lie = this.m_startBlockJs.lie;
+                let zhong_dian_hang = this.m_endBlockJs.hang;
+                let zhong_dian_lie = this.m_endBlockJs.lie;
+                let path = this.look_for_exit(this.di_tu_arr[qiian_hang][qidian_lie], this.di_tu_arr[zhong_dian_hang][zhong_dian_lie], this.di_tu_arr);
+                this.game_character = cc.instantiate(this.game_character_prefab);
+                if (this.xing_jie_dian) {
+                    this.xing_jie_dian.destroy();
+                    this.xing_jie_dian = null;
+                }
+                this.xing_jie_dian = new cc.Node();
+                this.xing_jie_dian.parent = this.game_node;
+                this.game_character.position = path[path.length - 1].position;
+                this.xing_jie_dian.addChild(this.game_character);
+                for (let i = path.length - 1; i >= 0; i--) {
+                    this.node.runAction(cc.sequence(cc.delayTime(0.5 + (path.length - i) / 5), cc.callFunc(function () {
+                        this.game_character.position = path[i].position;
+                    }.bind(this))))
+                }
+            }
+            return;
+        }
+
+
+        //另外,不是写在这里, 如果那个 划线或者做起点到终点的动作 完成了, 把状态再重新设置初始状态, 这样就是一个闭合的逻辑了
+        //又可以重新设置起点和终点了
+    },
     //启动按钮
     enablement() {
-        //this.add_brick(di_tu_arr);
         let num = 0;
         this.time = 0;
-        //this.location = [];
-        //这部分没用
-        this.bei_dianji = false;
         for (let i = 0; i < this.di_tu_arr.length; i++) {
             for (let j = 0; j < this.di_tu_arr[i].length; j++) {
                 let temp = this.di_tu_arr[i][j].getComponent('brick').ID;
                 let colour = colour1[temp];
                 this.di_tu_arr[i][j].getComponent('brick').brick_colour(colour[0], colour[1], colour[2]);
                 this.di_tu_arr[i][j].getComponent('brick').setVisited(false);
-                if (num < 2 && this.di_tu_arr[i][j].getComponent('brick').bei_dianji) {
-                    this.location[num] = {
-                        obj: this.di_tu_arr[i][j],
-                        hang: i,
-                        lie: j,
-                        clock: this.di_tu_arr[i][j].getComponent('brick').clock
-                    }
-                    num++;
-                    this.bei_dianji = true;
+                switch (num) {
+                    case 0:
+                        if (this.di_tu_arr[i][j].getComponent('brick').bei_dianji) {
+                            let qi_dian_colour = colour1[2];
+                            this.location[0] = {
+                                obj: this.di_tu_arr[i][j],
+                                hang: i,
+                                lie: j,
+                                clock: this.di_tu_arr[i][j].getComponent('brick').clock
+                            }
+                            qi_dian.obj.getComponent('brick').brick_colour(qi_dian_colour[0], qi_dian_colour[1], qi_dian_colour[2]);
+                            num++;
+                        }
+                    //break;
+
+                    default:
+                        //this.di_tu_arr[i][j].getComponent('brick').set_location(colour1[3]);
+                        if (this.di_tu_arr[i][j].getComponent('brick').bei_dianji) {
+                            this.location[1] = {
+                                obj: this.di_tu_arr[i][j],
+                                hang: i,
+                                lie: j,
+                                clock: this.di_tu_arr[i][j].getComponent('brick').clock
+                            }
+                            num++;
+                        }
+                        break;
                 }
             }
         }
-        if (!this.bei_dianji) {
-            this.time = 3;
-        }
-
         let qi_dian = this.location[0].clock < this.location[1].clock ? this.location[0] : this.location[1];
         let zhong_dian = this.location[0].clock > this.location[1].clock ? this.location[0] : this.location[1];
         let qi_dian_colour = colour1[2];
@@ -108,14 +209,20 @@ cc.Class({
             hang: 8,
             lie: 8,
             obj: this.di_tu_arr[8][8],
-            clock: 0
+            clock: Date.now()
         }
         this.location[1] = {
             hang: 1,
             lie: 7,
             obj: this.di_tu_arr[1][7],
-            clock: 1
+            clock: Date.now() * 2
         }
+
+        //一个区分当前是点击进行到哪一阶段的状态变量
+        //0: 初始状态也就是没有起点, 没有终点
+        //1: 有起点
+        //2: 有终点
+        this.m_blockState = 0;//
         // let dir = "right";
         // let post1 = this.findNextPoint({ hang: 9, lie: 9 }, dir, di_tu_arr);
         // let post2 = this.findNextPoint({ hang: 0, lie: 0 }, dir, di_tu_arr);
@@ -141,9 +248,19 @@ cc.Class({
             }
         */
 
+        //先清理部分
+        //1. 清理之前所有块的已访问标记
+        for (let i in this.di_tu_arr) {
+            for (let j in this.di_tu_arr[i]) {
+                this.di_tu_arr[i][j].getComponent('brick').setVisited(false);
+            }
+        }
+
         this.directions = ['down', 'right', 'up', 'left'];
         // 初始化，将起点加入堆栈；
-        this.Stack.push(start);
+        this.Stack.push(start);//这个Stack 做好准备了进行下一次操作了吗, 上一次搜索后里面存的东西清理了吗不全都pop出去了吗
+        let items = this.Stack.getItem();
+
         let res = [];
         while (!this.Stack.isEmpty()) {
             let dangqian = this.Stack.peek();
@@ -268,6 +385,7 @@ cc.Class({
                 brick.getComponent('brick').brick_colour(R, G, B);
                 brick.getComponent('brick').Name(map[i][j], i, j);
                 this.di_tu_arr[i][j] = brick;
+                this.di_tu_arr[i][j].getComponent('brick').receive_game_script(this);
                 if (map[i][j] != 0) {
                     this.di_tu_arr[i][j].getComponent('brick').forbid_click(false);
                 }

@@ -211,9 +211,9 @@
     "_opacity": 100,
     "_color": {
       "__type__": "cc.Color",
-      "r": 255,
-      "g": 255,
-      "b": 255,
+      "r": 247,
+      "g": 0,
+      "b": 0,
       "a": 255
     },
     "_contentSize": {
@@ -486,7 +486,7 @@
     "component": "",
     "_componentId": "e9accGNmitDo4DxVrTWhjL4",
     "handler": "button",
-    "customEventData": ""
+    "customEventData": "起点"
   },
   {
     "__type__": "cc.PrefabInfo",
