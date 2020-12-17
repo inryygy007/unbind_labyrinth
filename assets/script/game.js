@@ -96,19 +96,22 @@ cc.Class({
         this.act_arr = [];
 
         this.path = this.look_for_exit(this.di_tu_arr[qiian_hang][qidian_lie], this.di_tu_arr[zhong_dian_hang][zhong_dian_lie], this.di_tu_arr);
-        this.game_character = cc.instantiate(this.game_character_prefab);
+        // this.game_character[0] = cc.instantiate(this.game_character_prefab);
         if (this.xing_jie_dian) {
             this.xing_jie_dian.destroy();
             this.xing_jie_dian = null;
         }
         this.xing_jie_dian = new cc.Node();
         this.xing_jie_dian.parent = this.game_node;
-        this.game_character.position = this.path[this.path.length - 1].position;
-        this.xing_jie_dian.addChild(this.game_character);
         for (let i = this.path.length - 1; i >= 0; i--) {
+            this.game_character[i] = cc.instantiate(this.game_character_prefab);
+            this.game_character[i].active = false;
+            //this.game_character[i].position = this.path[this.path.length - 1].position;
+            this.xing_jie_dian.addChild(this.game_character[i]);
             let ta = this.node.runAction(cc.sequence(cc.delayTime(0.5 + (this.path.length - i) / 5), cc.callFunc(function () {
 
-                this.game_character.position = this.path[i].position;
+                this.game_character[i].position = this.path[i].position;
+                this.game_character[i].active = true;
             }.bind(this))));
             this.act_arr.push(ta);
         }
@@ -145,7 +148,8 @@ cc.Class({
 
         //动作数组
         this.act_arr = [];
-
+        //点数组
+        this.game_character = [];
         //一个区分当前是点击进行到哪一阶段的状态变量
         //0: 初始状态也就是没有起点, 没有终点
         //1: 有起点
