@@ -1,4 +1,7 @@
 const Stack = require("./stack");
+const AStarPath = require("./AStarPath");//A星寻路
+//保持命名风格
+const NormalPath = require("./path");//普通寻路
 const gap = 10;
 //键对值
 const colour1 = {
@@ -39,7 +42,6 @@ cc.Class({
             brick_js.setState('qidian');//把这个块设置成起点的颜色
             return;
         }
-
         //处理有点的状态, 分2种情况
         //1. 点击的是原来的起始块, 那么就取消起始块
         //2. 点击的是别的块, 那么就设置终点块
@@ -52,7 +54,6 @@ cc.Class({
                 this.m_endBlockJs = brick_js;
                 this.m_blockState = 2;
                 brick_js.setState('zhongdian');//把这个块设置成终点的颜色
-
                 //需要划线或者做起点到终点的动作
                 let qiian_hang = this.m_startBlockJs.hang;
                 let qidian_lie = this.m_startBlockJs.lie;
@@ -96,7 +97,6 @@ cc.Class({
         this.act_arr = [];
 
         this.path = this.look_for_exit(this.di_tu_arr[qiian_hang][qidian_lie], this.di_tu_arr[zhong_dian_hang][zhong_dian_lie], this.di_tu_arr);
-        // this.game_character[0] = cc.instantiate(this.game_character_prefab);
         if (this.xing_jie_dian) {
             this.xing_jie_dian.destroy();
             this.xing_jie_dian = null;
@@ -106,10 +106,8 @@ cc.Class({
         for (let i = this.path.length - 1; i >= 0; i--) {
             this.game_character[i] = cc.instantiate(this.game_character_prefab);
             this.game_character[i].active = false;
-            //this.game_character[i].position = this.path[this.path.length - 1].position;
             this.xing_jie_dian.addChild(this.game_character[i]);
             let ta = this.node.runAction(cc.sequence(cc.delayTime(0.5 + (this.path.length - i) / 5), cc.callFunc(function () {
-
                 this.game_character[i].position = this.path[i].position;
                 this.game_character[i].active = true;
             }.bind(this))));
@@ -118,6 +116,7 @@ cc.Class({
     },
     start() {
         this.location = [];
+        this.rule = 1;
         this.map = [
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
             [1, 0, 0, 1, 1, 1, 0, 0, 1, 1],
@@ -133,19 +132,6 @@ cc.Class({
         this.Stack = new Stack.Stack();
         this.Stack1 = new Stack.Stack();
         this.add_brick(this.map);
-        this.location[0] = {
-            hang: 8,
-            lie: 8,
-            obj: this.di_tu_arr[8][8],
-            clock: Date.now()
-        }
-        this.location[1] = {
-            hang: 1,
-            lie: 7,
-            obj: this.di_tu_arr[1][7],
-            clock: Date.now() * 2
-        }
-
         //动作数组
         this.act_arr = [];
         //点数组
@@ -155,153 +141,52 @@ cc.Class({
         //1: 有起点
         //2: 有终点
         this.m_blockState = 0;//
-        // let dir = "right";
-        // let post1 = this.findNextPoint({ hang: 9, lie: 9 }, dir, di_tu_arr);
-        // let post2 = this.findNextPoint({ hang: 0, lie: 0 }, dir, di_tu_arr);
-        // let post3 = this.findNextPoint({ hang: 9, lie: 0 }, dir, di_tu_arr);
-        // let post4 = this.findNextPoint({ hang: 0, lie: 9 }, dir, di_tu_arr);
-
-        // let x = ;
         let a = 100;
+    },
+    //在map node 的二维数组中找到指定的块
+    find_blocknode_inmapnods(block, ditu) {
+        for (let x of ditu) {
+            for (let y of x) {
+                let t_hang = y.getComponent('brick').hang;
+                let t_lie = y.getComponent('brick').lie;
+                if (t_hang == block.hang && t_lie == block.lie) {
+                    return y;
+                }
+            }
+        }
+        return null;
+    },
+    //寻路方法按钮
+    precept_button(value, data) {
+        this.rule = data;
     },
     //找出口 传入起点,终点, 地图, 知道要做
     look_for_exit(start, end, ditu) {
-        /**
-         * 初始化，将起点加入堆栈；
-            while(堆栈不为空){
-                取出栈顶位置为当前位置；
-                如果 当前位置是终点，
-                则 使用堆栈记录的路径标记从起点至终点的路径；
-                否则{
-                    按照从下、右、上、左的顺序将当前位置下一个可以探索的位置入栈；
-                    如果 当前位置的四周均不通
-                    则 当前位置出栈；
-                }
-            }
-        */
-
-        //先清理部分
-        //1. 清理之前所有块的已访问标记
-        for (let i in this.di_tu_arr) {
-            for (let j in this.di_tu_arr[i]) {
-                this.di_tu_arr[i][j].getComponent('brick').setVisited(false);
-            }
-        }
-
-        this.directions = ['down', 'right', 'up', 'left'];
-        // 初始化，将起点加入堆栈；
-        this.Stack.push(start);//这个Stack 做好准备了进行下一次操作了吗, 上一次搜索后里面存的东西清理了吗不全都pop出去了吗
-        let items = this.Stack.getItem();
-
         let res = [];
-        while (!this.Stack.isEmpty()) {
-            let dangqian = this.Stack.peek();
-            if (this.tell_isame_position(dangqian, end)) {
-                // 差不多找到路么了, 而且这个路径就是栈里面存的东西
+        let start1 = {
+            hang: start.getComponent('brick').hang,
+            lie: start.getComponent('brick').lie
+        };
+        let end1 = {
+            hang: end.getComponent('brick').hang,
+            lie: end.getComponent('brick').lie
+        };
 
-                let x = end.getComponent('brick').hang;
-                let y = end.getComponent('brick').lie;
-                while (!this.Stack.isEmpty()) {
-                    let cell = this.Stack.pop();
-                    let cell_x = cell.getComponent('brick').hang;
-                    let cell_y = cell.getComponent('brick').lie;
-                    // 要注意的是，只有和上一次的cell相邻的cell才是路径上的通道
-                    if (Math.abs(cell_x - x) + Math.abs(cell_y - y) <= 1) {
-                        cc.log(`路径点(${cell_x}, ${cell_y})`);
-                        res.push(cell);
-                    }
-                    x = cell_x;
-                    y = cell_y;
-                }
-
-                return res;
-            }
-            else {
-                // 向四个方向探索
-                let isDead = true;
-                for (let i in this.directions) {
-                    let t_dir = this.directions[i];
-                    let next_position = this.findNextPoint(dangqian, t_dir, ditu);
-                    if (next_position && next_position.getComponent('brick').ID != 1 && next_position.getComponent('brick').isValid()) {
-                        next_position.getComponent('brick').setVisited(true);
-                        this.Stack.push(next_position);
-                        cc.log(`位置行:${next_position.getComponent('brick').hang} 列: ${next_position.getComponent('brick').lie} 入栈`);
-                        isDead = false;
-                    }
-                }
-                // 四个方向都不能走，则该点为死胡同，出栈
-                if (isDead) {
-                    let k = this.Stack.pop();
-                    cc.log(`位置行:${k.getComponent('brick').hang} 列: ${k.getComponent('brick').lie} 出栈`);
-                }
-            }
-        }
-    },
-    //传一个位置进去, 要判断这个位置是不是已经在栈里了
-    isInStack(next_position) {
-        let x = next_position.getComponent('brick').hang;
-        let y = next_position.getComponent('brick').lie;
-        let arr = this.Stack.getItem();
-        for (let i = 0; i < arr.length; i++) {
-            let hang = arr[i].getComponent('brick').hang;
-            let lie = arr[i].getComponent('brick').lie;
-            if (x === hang && y === lie) {
-                return true;
-            }
-        }
-        return false;
-    },
-    //判断一个位置的四周通不通, 只有一个通那就是通, 否则就是不通
-    //如果某个位置已经在栈里面了, 也就访问过了的意思, 就不算做通路
-    whether_Way(dangqian, ditu) {
-        for (let key in this.directions) {
-            let next_position = this.findNextPoint(dangqian, this.directions[key], ditu)
-            if (next_position && next_position.getComponent('brick').ID != 1) {
-                return true;
-            }
-        }
-        return false;
-    },
-    //判断两个点是不是同一个位置
-    tell_isame_position(pos1, pos2) {
-        return pos1.x === pos2.x && pos1.y === pos2.y;
-    },
-    //根据传进来的点 找到下一个方向的点
-    findNextPoint(chuanjinliadedain, xiayigefangxiang, ditu) {
-        // let hang = chuanjinliadedain.hang;
-        // let lie = chuanjinliadedain.lie;
-
-        let hang = chuanjinliadedain.getComponent('brick').hang;
-        let lie = chuanjinliadedain.getComponent('brick').lie;
-        let next_hang = hang;
-        let next_lie = lie;
-        if (xiayigefangxiang == "up") {
-            next_hang = hang - 1;
-        }
-        else if (xiayigefangxiang == "down") {
-            next_hang = hang + 1;
-        }
-        else if (xiayigefangxiang == 'left') {
-            next_lie = lie - 1;
-        }
-        else if (xiayigefangxiang == 'right') {
-            next_lie = lie + 1;
+        //更精简的
+        let path_module = null;
+        if (this.rule == 1) {//要减少相同的代码
+            path_module = AStarPath;
+        } else if (this.rule == 2) {
+            path_module = NormalPath;
         }
 
-        //找出四个边界
-        let up_edge = 0;
-        let down_edge = ditu.length - 1;
-        let left_dege = 0;
-        let right_edge = ditu[0].length - 1;
-
-        //行,列跟边界去比较
-        if (/*超出边界 直接返回空*/next_hang < up_edge || next_hang > down_edge || next_lie < left_dege || next_lie > right_edge) {
-            return null;
+        let final_path = path_module.find_path(start1, end1, this.map);
+        //这里会一个从终点开始一个从起点开始,那就要保证这两个算法返回出来的数据都是相同的
+        for (let i = final_path.length - 1; i >= 0; i--) {
+            let x = final_path[i]
+            res.push(this.find_blocknode_inmapnods(x, ditu));
         }
-
-        //
-        return ditu[next_hang][next_lie];
-
+        return res;
     },
     //根据地图添加砖块和通道
     add_brick(map) {
