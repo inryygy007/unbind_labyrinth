@@ -30,7 +30,14 @@ cc.Class({
         }
     },
     // LIFE-CYCLE CALLBACKS:
+    //被点击的块
+    bei_dian_Ji_kuai(brick_js) {
 
+        this.qidong_xiaoqiu(this.hang, this.lie, brick_js.hang, brick_js.lie);
+        this.hang = brick_js.hang;
+        this.lie = brick_js.lie;
+
+    },
     // onLoad () {},
     //接收起点和终点, 有一个路径点被点中了
     you_lujing_beidianjile(brick_js) {
@@ -87,7 +94,7 @@ cc.Class({
         //又可以重新设置起点和终点了
     },
     //启动小球
-    qidong_xiaoqiu(qiian_hang, qidian_lie, zhong_dian_hang, zhong_dian_lie) {
+    qidong_xiaoqiu_huaxian(qiian_hang, qidian_lie, zhong_dian_hang, zhong_dian_lie) {
         // 1. 停掉之前的 划线或者做起点到终点的动作
         for (let i in this.act_arr) {
             //同样还是this.node 去停止这个十个动作
@@ -114,6 +121,30 @@ cc.Class({
             this.act_arr.push(ta);
         }
     },
+    qidong_xiaoqiu(qiian_hang, qidian_lie, zhong_dian_hang, zhong_dian_lie) {
+        // 1. 停掉之前的 划线或者做起点到终点的动作
+        for (let i in this.act_arr) {
+            //同样还是this.node 去停止这个十个动作
+            this.person.stopAction(this.act_arr[i]);
+            this.act_arr[i] = null;
+        }
+        this.act_arr = [];
+
+        this.path = this.look_for_exit(this.di_tu_arr[qiian_hang][qidian_lie], this.di_tu_arr[zhong_dian_hang][zhong_dian_lie], this.di_tu_arr);
+        let seqs = [];
+
+        for (let i = this.path.length - 1; i >= 0; i--) {
+            seqs.push(cc.moveTo(0.3, this.path[i].position));
+
+            // let ta = this.node.runAction(cc.sequence(cc.delayTime(0.5 + (this.path.length - i) / 5), cc.callFunc(function () {
+            //     this.game_character[i].position = this.path[i].position;
+            //     this.game_character[i].active = true;
+            // }.bind(this))));
+            // this.act_arr.push(ta);
+        }
+        let ta = this.person.runAction(cc.sequence(seqs));//谁启动的动作谁停止
+        this.act_arr.push(ta);
+    },
     start() {
         this.location = [];
         this.rule = 1;
@@ -129,9 +160,15 @@ cc.Class({
             [1, 1, 0, 0, 0, 0, 1, 0, 0, 1],
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         ]
+        this.hang = 8;
+        this.lie = 7;
         this.Stack = new Stack.Stack();
         this.Stack1 = new Stack.Stack();
         this.add_brick(this.map);
+        let person = cc.instantiate(this.game_character_prefab);
+        this.person = person;
+        this.person.position = this.di_tu_arr[this.hang][this.lie].position;
+        this.game_node.addChild(person);
         //动作数组
         this.act_arr = [];
         //点数组

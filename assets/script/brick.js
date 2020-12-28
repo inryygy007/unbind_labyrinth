@@ -51,7 +51,8 @@ cc.Class({
         this.num++
         cc.log(this.num);
         //把这个块的绑定的脚本传出去
-        this.game.you_lujing_beidianjile(this);//this 代表这个脚本, this.node 代表这个脚本绑的结点
+        //this.game.you_lujing_beidianjile(this);//this 代表这个脚本, this.node 代表这个脚本绑的结点
+        this.game.bei_dian_Ji_kuai(this);
     },
     //是否这个块被访问过
     isValid() {
