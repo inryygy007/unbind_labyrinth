@@ -27,7 +27,12 @@ cc.Class({
         game_node: {
             type: cc.Node,
             default: null
-        }
+        },
+        goods_prefab: {
+            type: cc.Prefab,
+            default: null
+        },
+        hp: 3
     },
     // LIFE-CYCLE CALLBACKS:
     //被点击的块
@@ -135,18 +140,54 @@ cc.Class({
 
         for (let i = this.path.length - 1; i >= 0; i--) {
             seqs.push(cc.moveTo(0.3, this.path[i].position));
-
-            // let ta = this.node.runAction(cc.sequence(cc.delayTime(0.5 + (this.path.length - i) / 5), cc.callFunc(function () {
-            //     this.game_character[i].position = this.path[i].position;
-            //     this.game_character[i].active = true;
-            // }.bind(this))));
-            // this.act_arr.push(ta);
         }
         let ta = this.person.runAction(cc.sequence(seqs));//谁启动的动作谁停止
         this.act_arr.push(ta);
     },
+    //创建玩家
+    creation_player() {
+        let person = cc.instantiate(this.game_character_prefab);
+        // person.getComponent("player").jie_shou_game(this);
+        this.person = person;
+        this.person.position = this.di_tu_arr[this.hang][this.lie].position;
+        this.game_node.addChild(person);
+
+        var anim = person.getComponent(cc.Animation);
+
+        // 如果没有指定播放哪个动画，并且有设置 defaultClip 的话，则会播放 defaultClip 动画
+        anim.play("clip2");
+
+        // // 指定播放 test 动画
+        // anim.play('test');
+
+        // // 指定从 1s 开始播放 test 动画
+        // anim.play('test', 1);
+
+        // // 使用 play 接口播放一个动画时，如果还有其他的动画正在播放，则会先停止其他动画
+        // anim.play('test2');
+    },
+    //创建道具
+    creation_goods() {
+        let index = Math.floor((Math.random() * this.goods_arr.length));
+        if (this.goods) {
+            this.goods.destroy();
+            this.goods = null;
+        }
+        this.goods = new cc.Node();
+        this.goods.parent = this.goods_arr[index];
+        let goods = cc.instantiate(this.goods_prefab);
+        this.goods.addChild(goods);
+    },
+    //判断玩家的位置是不是等于道具的位置
+    Player_Is_goods() {
+        // if (this.person.position === this.goods.position) {
+        //     return true;
+        // }
+    },
     start() {
         this.location = [];
+        //可画物品的数组
+        this.goods_arr = [];
         this.rule = 1;
         this.map = [
             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
@@ -165,10 +206,8 @@ cc.Class({
         this.Stack = new Stack.Stack();
         this.Stack1 = new Stack.Stack();
         this.add_brick(this.map);
-        let person = cc.instantiate(this.game_character_prefab);
-        this.person = person;
-        this.person.position = this.di_tu_arr[this.hang][this.lie].position;
-        this.game_node.addChild(person);
+        this.creation_player();
+        this.creation_goods();
         //动作数组
         this.act_arr = [];
         //点数组
@@ -178,7 +217,20 @@ cc.Class({
         //1: 有起点
         //2: 有终点
         this.m_blockState = 0;//
+        let hp_node = cc.find('HP', this.node);
+        this.hp_comp = hp_node.addComponent("HP");
+
+
+        //给玩家设置一个血量
+        this.person.getComponent("player").Hp = 1;
+
+        this.Refresh_player_hp();
         let a = 100;
+    },
+    //刷新玩家血量
+    Refresh_player_hp() {
+        let hp = this.person.getComponent("player").Hp;
+        this.hp_comp.Set_Hp(hp);
     },
     //在map node 的二维数组中找到指定的块
     find_blocknode_inmapnods(block, ditu) {
@@ -242,7 +294,10 @@ cc.Class({
                 this.di_tu_arr[i][j].getComponent('brick').receive_game_script(this);
                 if (map[i][j] != 0) {
                     this.di_tu_arr[i][j].getComponent('brick').forbid_click(false);
+                } else {
+                    this.goods_arr.push(this.di_tu_arr[i][j]);
                 }
+
                 this.game_node.addChild(brick);
             }
         }

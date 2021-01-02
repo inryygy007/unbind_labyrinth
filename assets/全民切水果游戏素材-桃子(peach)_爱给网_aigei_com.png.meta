@@ -1,0 +1,34 @@
+{
+  "ver": "2.3.3",
+  "uuid": "ba517068-0c0a-4154-85a5-6cb1e5e23b72",
+  "type": "sprite",
+  "wrapMode": "clamp",
+  "filterMode": "bilinear",
+  "premultiplyAlpha": false,
+  "genMipmaps": false,
+  "packable": true,
+  "platformSettings": {},
+  "subMetas": {
+    "全民切水果游戏素材-桃子(peach)_爱给网_aigei_com": {
+      "ver": "1.0.4",
+      "uuid": "1102e292-1645-4385-b53b-4ec9ca437ecb",
+      "rawTextureUuid": "ba517068-0c0a-4154-85a5-6cb1e5e23b72",
+      "trimType": "auto",
+      "trimThreshold": 1,
+      "rotated": false,
+      "offsetX": 0,
+      "offsetY": -2,
+      "trimX": 4,
+      "trimY": 7,
+      "width": 147,
+      "height": 145,
+      "rawWidth": 155,
+      "rawHeight": 155,
+      "borderTop": 0,
+      "borderBottom": 0,
+      "borderLeft": 0,
+      "borderRight": 0,
+      "subMetas": {}
+    }
+  }
+}

@@ -49,7 +49,7 @@ cc.Class({
         // }
         this.clock = Date.now();
         this.num++
-        cc.log(this.num);
+        //cc.log(this.num);
         //把这个块的绑定的脚本传出去
         //this.game.you_lujing_beidianjile(this);//this 代表这个脚本, this.node 代表这个脚本绑的结点
         this.game.bei_dian_Ji_kuai(this);
